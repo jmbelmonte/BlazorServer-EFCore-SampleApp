@@ -1,0 +1,126 @@
+﻿@page "/products"
+@using Microsoft.AspNetCore.Components.Forms
+@using BlazorServer_EFCore_SampleApp.Data.Entities
+@using BlazorServer_EFCore_SampleApp.Data.Services
+@inject IProductService ProductService
+
+<h3>Product List</h3>
+
+@if (products == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Created At</th>
+                <th>Category</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in products)
+            {
+                <tr>
+                    <td>@p.Name</td>
+                    <td>@p.Price</td>
+                    <td>@p.CreatedAt</td>
+                    <td>@(p.Category?.Name ?? "N/A")</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => SelectProduct(p)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteProduct(p.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+
+    <h3>@(selectedProduct.Id == 0 ? "Add Product" : "Edit Product")</h3>
+
+    <EditForm Model="@selectedProduct" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="Name">Name</label>
+            <InputText id="Name" class="form-control" @bind-Value="selectedProduct.Name" />
+            <ValidationMessage For="@(() => selectedProduct.Name)" />
+        </div>
+
+        <div class="mb-3">
+            <label for="Price">Price</label>
+            <InputNumber id="Price" class="form-control" @bind-Value="selectedProduct.Price" />
+            <ValidationMessage For="@(() => selectedProduct.Price)" />
+        </div>
+
+        <CategoryDropdown @bind-SelectedCategoryId="@selectedProduct.CategoryId" Label="Product Category" />
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-success m-1">Save</button>
+            @if (selectedProduct.Id != 0)
+            {
+                <button class="btn btn-secondary" @onclick="ResetForm">Cancel</button>
+            }
+        </div>
+    </EditForm>
+}
+
+@code {
+    private List<Product>? products;
+    private Product selectedProduct = new Product();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        products = await ProductService.GetProductsAsync();
+    }
+
+    private void SelectProduct(Product product)
+    {
+        selectedProduct = new Product
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Price = product.Price,
+                CreatedAt = product.CreatedAt,
+                CategoryId = product.CategoryId
+            };
+    }
+
+    private async Task HandleValidSubmit(EditContext editContext)
+    {
+        if (selectedProduct.Id == 0)
+        {
+            await ProductService.AddProductAsync(selectedProduct);
+        }
+        else
+        {
+            await ProductService.UpdateProductAsync(selectedProduct);
+        }
+
+        await LoadProducts();
+        ResetForm();
+    }
+
+    private async Task DeleteProduct(int id)
+    {
+        await ProductService.DeleteProductAsync(id);
+        await LoadProducts();
+    }
+
+    private void ResetForm()
+    {
+        selectedProduct = new Product();
+    }
+    
+}

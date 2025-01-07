@@ -1,0 +1,39 @@
+﻿@using BlazorServer_EFCore_SampleApp.Data.Entities
+@using BlazorServer_EFCore_SampleApp.Data.Services
+@inject ICategoryService CategoryService
+
+<div>
+    <label>@Label</label>
+    <select class="form-select"
+            value="@SelectedCategoryId"
+            @onchange="OnCategoryChanged">
+        <option value="">-- Select a Category --</option>
+        @if (categories != null)
+        {
+            @foreach (var cat in categories)
+            {
+                <option value="@cat.CategoryId">@cat.Name</option>
+            }
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter] public int? SelectedCategoryId { get; set; }
+    [Parameter] public EventCallback<int?> SelectedCategoryIdChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "Category";
+
+    private List<Category>? categories;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await CategoryService.GetAllCategoriesAsync();
+    }
+
+    private async Task OnCategoryChanged(ChangeEventArgs e)
+    {
+        SelectedCategoryId = int.TryParse(e.Value?.ToString(), out var newId) ? newId : null;
+
+        await SelectedCategoryIdChanged.InvokeAsync(SelectedCategoryId);
+    }
+}
